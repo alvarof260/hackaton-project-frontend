@@ -1,0 +1,1079 @@
+
+# Especificación de Requisitos de Software (SRS)
+
+## Plataforma de Comisiones Artísticas
+
+---
+
+## 1. Introducción
+
+### 1.1. Propósito
+
+El propósito de este documento es detallar los requisitos del sistema propuesto para la gestión de comisiones artísticas. El sistema busca automatizar y transparentar la exhibición de catálogos, el cálculo de precios y el cobro de servicios de dibujo.
+
+### 1.2. Ámbito del Sistema
+
+El sistema busca digitalizar el proceso de encargo de ilustraciones. Permitirá a los artistas registrar catálogos con precios base, configurar calculadoras de extras, mostrar una galería de trabajos y gestionar una cola pública de proyectos paralelos. Además, integrará pasarelas de pago (Stripe, Mercado Pago, PayPal) para asegurar la transacción.
+
+### 1.3. Definiciones, Acrónimos y Abreviaturas
+
+| Término | Descripción |
+|---------|-------------|
+| **Catálogo** | Lista de servicios base que ofrece el artista (ej: Lineart, Full Color). |
+| **Calculadora de Extras** | Herramienta que modifica el precio base según variables (ej: +1 personaje, uso comercial). |
+| **Proyectos Paralelos (Queue)** | Lista pública que muestra el estado actual de los encargos en los que está trabajando el artista. |
+| **Tier** | Nivel de servicio en el catálogo del artista. |
+| **Addon** | Modificador de precio en la calculadora de extras. |
+| **Comisión** | Pedido de un cliente a un artista por un trabajo artístico. |
+| **Milestone** | Hito de pago (pago completo o seña + saldo). |
+
+### 1.4. Referencias
+
+Sin referencia.
+
+---
+
+## 2. Descripción General
+
+### 2.1. Perspectiva del Producto
+
+El sistema es una aplicación web (tipo SaaS/Marketplace) diseñada específicamente para artistas de dibujo que trabajan por comisiones. El objetivo principal es eliminar la fricción, los malos entendidos y las estafas en el proceso de contratación mediante:
+
+- Estandarización de precios (catálogos y calculadoras)
+- Transparencia del tiempo de espera (cola de proyectos paralelos)
+- Seguridad financiera y legal mediante contratos y pagos integrados
+
+### 2.2. Funciones del Producto
+
+1. **Exhibición de Galería y Catálogo** — Portfolio visual y servicios ofrecidos.
+2. **Cálculo de Precios Dinámico** — Calculadora de extras con actualización en tiempo real.
+3. **Transparencia de Estado** — Cola pública de proyectos paralelos.
+4. **Procesamiento de Pagos** — Integración con Mercado Pago, Stripe y PayPal.
+
+### 2.3. Características de los Usuarios
+
+| Rol | Descripción |
+|-----|-------------|
+| **Artista (Creador)** | Dueño de su tienda. Sube imágenes a su galería, define el catálogo base, configura la calculadora de extras y administra los estados de su cola de trabajo. |
+| **Cliente (Comprador)** | Navega la galería, arma su cotización, acepta el contrato y gatilla el pago. |
+| **Administrador** | Backoffice para gestionar reportes, resolver disputas y monitorear pasarelas de pago. |
+
+### 2.4. Restricciones
+
+- Compatible con cualquier dispositivo con acceso a internet.
+- Depende de la disponibilidad de las APIs de Mercado Pago, Stripe y PayPal.
+- Enfoque **Mobile First** (la mayoría accede desde redes sociales en celular).
+
+### 2.5. Suposiciones y Dependencias
+
+- Los artistas cuentan con cuentas activas en las pasarelas de pago mencionadas.
+- Las imágenes públicas deben optimizarse (WebP) y servirse por CDN.
+
+---
+
+## 3. Requisitos Específicos
+
+### 3.1. Interfaces del Sistema
+
+El sistema se divide en tres grandes módulos:
+
+#### Módulo 1: Muro del Artista (Vista Pública / Frontend de Venta)
+
+La carta de presentación. Todo cliente que entre al link del artista verá:
+
+| Sección | Descripción |
+|---------|-------------|
+| **Perfil** | Foto de perfil, banner, biografía y links a redes sociales. |
+| **Galería** | Portfolio visual optimizado. |
+| **Catálogo de Comisiones** | Servicios ofrecidos + Calculadora de Extras dinámica. |
+| **Proyectos Paralelos** | Indicador de disponibilidad y lista pública de trabajos en curso. |
+| **Contacto** | Botón para iniciar solicitud de comisión. |
+
+#### Módulo 2: Tablero de Gestión (Backoffice del Artista)
+
+El centro de comando del creador:
+
+| Sección | Descripción |
+|---------|-------------|
+| **Administración de Pedidos** | Bandeja de entrada de solicitudes. Aceptar, rechazar o pedir más info. |
+| **Gestión de Cola** | Panel para mover proyectos de estado (Pendiente → Boceto → Entregado). |
+| **Gestión de Contenido** | ABM de galería y catálogo de precios. |
+
+#### Módulo 3: Configuración (Vista Privada)
+
+| Para el Artista | Para el Cliente |
+|-----------------|------------------|
+| Configuración de cuenta, contraseña e integración de pagos (Mercado Pago, Stripe, PayPal). | Datos personales, historial de pedidos y configuración de notificaciones. |
+
+---
+
+### 3.2. Requisitos Funcionales
+
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RF-01 | Gestión de Portfolio | El artista debe poder subir, editar y eliminar imágenes para su galería. |
+| RF-02 | Catálogo de Servicios | El artista debe crear niveles de servicio (Tier) con nombre, descripción, precio base y ETA. |
+| RF-03 | Calculadora de Extras | El artista debe configurar "Extras" que modifiquen el precio base (montos fijos o multiplicadores). |
+| RF-04 | Cotización Dinámica | El cliente debe seleccionar un servicio, agregar extras y ver el presupuesto calculado en tiempo real. |
+| RF-05 | Adjuntar Referencias | El cliente debe poder adjuntar referencias visuales y texto descriptivo. |
+| RF-06 | Procesamiento de Pagos | Integración con Mercado Pago, Stripe y PayPal para abonar el presupuesto. |
+| RF-07 | Creación de Proyecto | El sistema debe crear automáticamente una entrada en Proyectos Paralelos cuando el pago es confirmado. |
+| RF-08 | Gestión de Estados | El artista debe poder cambiar el estado de los proyectos (Boceto, Lineart, Finalizado). |
+| RF-09 | Transparencia Pública | El sistema debe mostrar públicamente la lista de proyectos paralelos del artista. |
+| RF-10 | Autenticación y Roles | El sistema debe autenticar usuarios diferenciando roles (Artista vs. Cliente). |
+| RF-11 | Generación de Contrato | Sistema debe autogenerar documento vinculante con Términos de Servicio del artista. |
+| RF-12 | Protección de Entregables | Las previsualizaciones deben tener marca de agua hasta que el pago final esté acreditado. |
+
+---
+
+### 3.3. Requisitos de Rendimiento
+
+| Requisito | Descripción |
+|-----------|-------------|
+| **Velocidad de Calculadora** | Actualización del monto final en menos de 1 segundo al seleccionar/deseleccionar extras. |
+| **Carga de Imágenes** | Galería optimizada para tiempos de carga rápidos (WebP + CDN). |
+| **Escalabilidad** | Cola de trabajo y notificaciones asíncronas para manejar picos de tráfico (ej: 500 usuarios calculando precios simultáneamente). |
+
+---
+
+### 3.4. Requisitos de Seguridad
+
+| Requisito | Descripción |
+|-----------|-------------|
+| **Contraseñas** | Hash de contraseñas. |
+| **Contratos** | Inmutables (no se editen, se versionen). |
+| **Datos de Pago** | No se almacenan tarjetas de crédito (PCI Compliance delegada a Stripe/Mercado Pago). |
+| **Archivos** | Imágenes públicas en CDN; archivos finales en buckets privados con links temporales. |
+
+---
+
+### 3.5. Atributos de Calidad
+
+| Atributo | Descripción |
+|----------|-------------|
+| **Usabilidad** | Calculadora intuitiva para el cliente; configuración del catálogo sin conocimientos técnicos para el artista. |
+| **Seguridad** | Transacciones financieras delegadas a tokens seguros de las pasarelas. |
+| **Mantenibilidad** | Código modular: lógica de calculadora, gestión de imágenes y procesamiento de pagos separados. |
+
+---
+
+## 4. Modelo de Datos Conceptual
+
+### 4.1. Entidades Principales
+
+| Entidad | Descripción |
+|---------|-------------|
+| **Usuario (User)** | Data básica, roles (Artista/Cliente) y credenciales. |
+| **Perfil de Artista (ArtistProfile)** | Vinculado al usuario. Biografía, links de redes, ID de pasarelas de pago, estado (Abierto/Lleno). |
+| **Ítem de Catálogo (Tier)** | Servicio base (Sketch, Full Render). Precio, descripción, tiempo estimado. |
+| **Extras (Addon)** | Modificadores de la calculadora. Montos fijos o porcentajes. |
+| **Comisión (Commission)** | Une Cliente, Artista, Tier y Extras. Monto final, referencias, Estado. |
+| **Contrato (ContractAgreement)** | Registro inmutable del acuerdo. Fecha, hora, IP, texto exacto. |
+| **Transacción (Transaction)** | Registro del pago. Vinculado a Comisión y webhook de pasarela. |
+
+---
+
+## 5. Flujo Core (Happy Path)
+
+```
+Cliente aterriza en perfil del Artista
+         ↓
+Mira la Galería para validar calidad
+         ↓
+Selecciona nivel de servicio del Catálogo (Boceto, Lineart, Full Color)
+         ↓
+Juega con la Calculadora de Extras y obtiene presupuesto exacto
+         ↓
+Manda el requerimiento detallado con referencias
+         ↓
+Artista revisa y hace clic en "Aceptar"
+         ↓
+Sistema genera el Acuerdo/Contrato automático
+         ↓
+Cliente paga (100% o 50% de seña) → Mercado Pago, Stripe o PayPal
+         ↓
+¡Trabajo entra automáticamente en Proyectos Paralelos públicos!
+         ↓
+Artista entrega obra final → Se libera pago restante → Ciclo cerrado
+```
+
+---
+
+## 6. Estados de Proyecto Paralelo
+
+| Estado | Descripción |
+|--------|-------------|
+| 🟡 En Lista de Espera | Pendiente de inicio |
+| ✏️ Bocetando | Fase inicial de dibujo |
+| 🎨 Coloreando | Aplicando color y shading |
+| ✅ Terminado | Listo para entrega |
+
+---
+
+*Documento generado para el desarrollo de la Plataforma de Comisiones Artísticas.*
+
+
+PRD: CommiFlow (Plataforma de Comisiones Artísticas)
+
+    Tu arte. Tus reglas. Tu flujo de trabajo. Todo en un solo link.
+
+Versión: 1.0.0-draft
+
+Autor: Estanislao (Arquitectura guiada por Jarvis)
+
+Fecha: 24 de Marzo de 2026
+
+Estado: Draft / Iteración 1
+
+Stack Core: React (SPA), .NET 10 (Web API), PostgreSQL
+1. Planteamiento del Problema (Problem Statement)
+
+Vender arte por encargo en 2026 sigue siendo un caos organizativo para la gran mayoría de los artistas independientes. A pesar de que la demanda de comisiones (para avatares, assets de streaming, ilustraciones personales o comerciales) está en su punto más alto, el flujo de trabajo está roto.
+
+El problema real no es dibujar; es todo lo que pasa antes y después del dibujo.
+
+Un artista promedio hoy sufre de:
+
+    Fricción en la cotización: Mensajes interminables por Instagram o X (Twitter) del tipo "Hola, ¿cuánto cobrás por un dibujo de mi personaje con una espada y fondo de bosque?". El artista tiene que calcular mentalmente, explicar sus precios y rogar que el cliente no se asuste y desaparezca.
+
+    Ansiedad del cliente (El síndrome "¿Para cuándo está?"): Como no hay un sistema de seguimiento transparente, el cliente manda mensajes constantemente interrumpiendo el flujo de trabajo del artista para pedir actualizaciones.
+
+    Gestión de pagos manual: Depender de links sueltos de PayPal o Mercado Pago, revisar comprobantes a mano y el miedo constante al "chargeback" (desconocimiento de compra) o a entregar el arte y que no te paguen el saldo restante.
+
+    Desorganización de los "Slots": Anunciar "Comisiones Abiertas (3/5 slots)" en un tweet que a las 2 horas queda sepultado en el feed, generando sobreventa o pérdida de oportunidades.
+
+La mayoría de los artistas resuelve esto usando un frankenstein de herramientas: un link en bio (Linktree), un Google Docs o Carrd para los precios, Trello público para la cola de trabajo, y DMs para negociar.
+
+Nuestro sistema elimina este frankenstein. Unificamos el catálogo, la calculadora de precios dinámica, la cola de trabajo pública y la pasarela de pagos en una sola herramienta diseñada específicamente para este nicho.
+2. Visión del Producto
+
+CommiFlow es el sistema operativo para el artista de comisiones.
+
+No somos una simple vidriera. Somos una plataforma SaaS (Software as a Service) que profesionaliza el trato entre el creador y su cliente, brindando seguridad y transparencia.
+
+Antes: "Mirá mis precios en este Google Doc, pasame las referencias por DM, te aviso cuando empiece tu dibujo y te paso el alias de Mercado Pago."
+
+Después: El cliente entra al perfil del artista, elige el estilo, tilda "+1 personaje" y "Fast Delivery" en la calculadora, ve el precio exacto, sube sus imágenes de referencia, paga la seña y automáticamente ve cómo su nombre aparece en la cola de trabajo pública del artista en estado "En Espera". Es así de fácil, hermano.
+3. Usuarios Objetivo (Target Users)
+3.1. Primarios
+
+    Artistas Freelance (Creadores): Ilustradores digitales, diseñadores de personajes, artistas de pixel art, riggers de VTubers. Buscan optimizar su tiempo, verse profesionales y asegurar su dinero.
+
+    Clientes Frecuentes (Compradores): Creadores de contenido (streamers/youtubers), autores de rol (D&D), o fanáticos que buscan materializar sus ideas. Buscan un proceso de compra sin fricción, saber exactamente cuánto van a pagar y tener certeza de en qué estado está su pedido.
+
+3.2. Secundarios
+
+    Agencias de VTubing / Esports: Equipos que necesitan contratar arte de manera constante y requieren recibos claros y trazabilidad de los pedidos.
+
+    Administradores del Sistema (Nosotros): Equipo de soporte técnico que monitorea la salud de la plataforma, resuelve errores y analiza métricas de conversión.
+
+4. Arquitectura Técnica y Decisiones (Tech Stack)
+
+Hermano, esta es la base de la catedral. Elegimos este stack por razones muy concretas de escalabilidad y mantenibilidad.
+4.1. Frontend: React Puro (SPA)
+
+    Por qué: Queremos interactividad inmediata. La Calculadora de Extras tiene que ser fluida; si el cliente tilda una opción, el precio total en pantalla debe actualizarse en 0 milisegundos sin recargar la página.
+
+    Patrones a usar: * Vamos a manejar el estado global de la calculadora y el flujo de compra con un gestor liviano (ej: Zustand o Context API si es simple).
+
+        React Router para la navegación entre el "Muro del Artista" y el "Tablero de Gestión".
+
+        Trade-off asumido: Al no usar SSR (Next.js), sacrificamos el SEO dinámico de las tarjetas de Twitter/X por defecto, pero ganamos en simplicidad de despliegue y un frontend completamente desacoplado y cacheable en una CDN.
+
+4.2. Backend: .NET 10 (C#)
+
+    Por qué: Necesitamos un tipado fuerte, transacciones seguras (estamos manejando plata) y un rendimiento bestial. .NET 10 nos da las Minimal APIs que son ligerísimas para arrancar el proyecto, pero con toda la potencia del framework detrás para cuando necesitemos escalar.
+
+    Patrones a usar:
+
+        Arquitectura en Capas (Controllers/Minimal APIs -> Services -> Repositories).
+
+        Entity Framework Core (EF Core) como ORM para mapear nuestros objetos C# a las tablas relacionales.
+
+        Inyección de Dependencias (nativa en .NET) para mantener el código testeable.
+
+4.3. Base de Datos: PostgreSQL
+
+    Por qué: Relacional 100%. Las entidades de este negocio están fuertemente acopladas. Un Pedido pertenece a un Usuario (Cliente), requiere un Servicio (Tier), incluye múltiples Extras y genera un Pago. Postgres maneja estas relaciones, integridad referencial y bloqueos transaccionales mejor que nadie. Además, su soporte para JSONB nos va a salvar la vida si necesitamos guardar configuraciones dinámicas de la calculadora sin romper el esquema.
+
+5. Módulos del Sistema (Scope)
+
+Para estructurar el desarrollo, dividimos la plataforma en tres módulos principales:
+Módulo	Descripción	Frontend Route (Ejemplo)	Backend Area
+1. Muro (Público)	La vidriera. El perfil, la galería, el catálogo con la calculadora y la cola de trabajo pública (Queue).	/:username	Catalog API, Queue API
+2. Tablero (Privado)	El backoffice del artista. Donde acepta pedidos, cambia estados y gestiona sus cobros.	/dashboard/*	Orders API, Artist API
+3. Core & Auth	Registro, login, configuración de cuenta, integración con pasarelas de pago (Mercado Pago/Stripe).	/auth, /settings	Identity API, Payment API
+6. Requisitos Funcionales Detallados (RF)
+
+Acá es donde bajamos la visión a tierra. Estos son los contratos de lo que el sistema DEBE hacer.
+6.1. Módulo Core y Autenticación
+
+    RF-01: Registro de Usuarios: El sistema debe permitir el registro de usuarios especificando su rol inicial: "Quiero ofrecer mis servicios (Artista)" o "Quiero encargar arte (Cliente)".
+
+    RF-02: Autenticación JWT: El backend en .NET 10 debe proveer autenticación basada en JSON Web Tokens (JWT) para asegurar las rutas de las APIs.
+
+    RF-03: Perfil Base: Todo usuario debe poder configurar un nombre de visualización, nombre de usuario (slug único para la URL, ej: /estanislao-art), avatar y biografía.
+
+6.2. Módulo de Exhibición (Catálogo y Galería)
+
+    RF-04: Gestión de Galería: El artista debe poder subir, eliminar y ordenar imágenes de muestra (formatos JPG, PNG, WebP) con un límite de peso por archivo.
+
+    RF-05: Creación de Tiers (Servicios Base): El artista debe poder definir "Tiers" o niveles de servicio. Cada Tier debe contener:
+
+        Título (Ej: "Busto Lineart").
+
+        Descripción.
+
+        Imagen de portada.
+
+        Precio Base (Monto y Moneda, ej: ARS o USD).
+
+        Tiempo Estimado de Entrega (ETA en días).
+
+    RF-06: Configuración de Extras (Calculadora): El artista debe poder crear modificadores de precio aplicables a los Tiers. Tipos de Extras soportados:
+
+        Suma Fija: Ej: "+ Arma detallada" (Suma $10).
+
+        Multiplicador: Ej: "Uso Comercial" (Multiplica el subtotal x2).
+
+6.3. Módulo de Compra (Frontend del Cliente)
+
+    RF-07: Calculadora en Tiempo Real: El cliente, al visitar un Tier, debe ver un formulario dinámico en React. Al seleccionar extras, el "Precio Total Estimado" debe recalcularse instantáneamente en el cliente.
+
+    RF-08: Formulario de Requerimientos: Antes de confirmar el pedido, el cliente debe proveer la información necesaria:
+
+        Descripción de texto detallada.
+
+        Subida de imágenes de referencia (hasta 5 imágenes).
+
+    RF-09: Generación del Pedido: Al confirmar, el frontend debe enviar el payload completo (Tier, Extras seleccionados, Referencias) a la API de .NET, la cual creará la entidad Order con estado Pendiente de Aprobación.
+
+6.4. Módulo de Gestión de Pedidos (El Tablero)
+
+    RF-10: Bandeja de Entrada: El artista debe tener una vista en su dashboard con los pedidos entrantes (Pendiente de Aprobación).
+
+    RF-11: Aceptación / Rechazo: El artista debe poder revisar las referencias del cliente y decidir Aceptar el pedido (lo que habilita el pago) o Rechazarlo (con un motivo opcional).
+
+    RF-12: Estados del Proyecto: Una vez que el pedido está activo (pagado), el artista debe poder transicionar el estado del mismo:
+
+        En Lista de Espera (Slot reservado).
+
+        Bocetando (WIP 1).
+
+        Lineart / Color (WIP 2).
+
+        Entregado (Finalizado).
+
+6.5. Módulo de Transparencia (La Cola / Queue)
+
+    RF-13: Tablero Público de Cola: El "Muro" del artista debe mostrar públicamente una lista (read-only) de los pedidos activos y sus estados actuales.
+
+    RF-14: Privacidad en la Cola: El sistema debe permitir al cliente elegir al momento de comprar si quiere que su nombre sea público en la cola de trabajo o figurar como "Cliente Anónimo".
+
+6.6. Módulo de Pagos (Integración)
+
+    RF-15: Configuración de Pasarela: El artista debe poder conectar sus credenciales de Mercado Pago (para moneda local) y/o Stripe/PayPal (para moneda extranjera) en su configuración.
+
+    RF-16: Generación de Link de Pago: Cuando el artista Acepta un pedido (RF-11), el backend .NET debe comunicarse con la API de la pasarela correspondiente para generar un PaymentIntent o Link de Pago.
+
+    RF-17: Webhooks de Confirmación: El backend .NET debe exponer endpoints seguros para recibir Webhooks de Mercado Pago/Stripe. Al recibir la confirmación de pago exitoso, el sistema debe cambiar automáticamente el estado del pedido de Esperando Pago a En Lista de Espera (activando el RF-13).
+
+7. Modelo de Datos Conceptual (PostgreSQL + EF Core)
+
+Para mapear esto con Entity Framework Core en .NET 10, vamos a usar un diseño altamente normalizado para el catálogo, pero desnormalizado e inmutable para los pedidos.
+
+¿Por qué? Te lo explico como arquitecto: Si un artista hoy cobra un "Extra de Fondo" a $5000 y el mes que viene lo sube a $8000, los recibos de los pedidos viejos NO pueden cambiar. Por eso, en la orden guardamos una "foto" (snapshot) de los precios al momento de la compra.
+
+Entidades Principales:
+
+    Users (Usuarios Base):
+
+        Id (UUID, PK)
+
+        Username (String, Unique - Ej: 'estanislao_art')
+
+        Email (String, Unique)
+
+        PasswordHash (String)
+
+        Role (Enum: Artist, Client, Admin)
+
+        CreatedAt (DateTime UTC)
+
+    ArtistProfiles (Extensión del Usuario):
+
+        Id (UUID, PK)
+
+        UserId (UUID, FK a Users, Unique)
+
+        DisplayName (String)
+
+        Bio (Text)
+
+        IsQueueOpen (Boolean - Control maestro para pausar comisiones)
+
+        MercadoPagoAccessToken (String, Encriptado)
+
+        StripeAccountId (String)
+
+    Tiers (El Catálogo de Servicios):
+
+        Id (UUID, PK)
+
+        ArtistId (UUID, FK a ArtistProfiles)
+
+        Name (String - Ej: "Full Render")
+
+        Description (Text)
+
+        BasePrice (Decimal 18,2)
+
+        Currency (String - Ej: "ARS", "USD")
+
+        EstimatedDays (Int)
+
+        IsActive (Boolean)
+
+    Addons (Calculadora de Extras):
+
+        Id (UUID, PK)
+
+        TierId (UUID, FK a Tiers)
+
+        Name (String - Ej: "+1 Personaje")
+
+        Type (Enum: FixedAmount, PercentageMultiplier)
+
+        Value (Decimal 18,2 - Ej: 15.00 o 1.5)
+
+    Commissions (El Pedido / La Transacción Core):
+
+        Id (UUID, PK)
+
+        ClientId (UUID, FK a Users)
+
+        ArtistId (UUID, FK a ArtistProfiles)
+
+        Status (Enum: PendingApproval, AwaitingPayment, InQueue, WIP_Sketch, WIP_Color, Completed, Cancelled)
+
+        ClientBrief (Text - Lo que pide el cliente)
+
+        ReferenceImages (Array de Strings / JSON - URLs de AWS S3 o almacenamiento)
+
+        FinalPrice (Decimal 18,2 - El cálculo final validado por el backend)
+
+        SnapshotData (JSONB - FUNDAMENTAL: Acá guardamos cómo se componía el precio en ese momento exacto, ej: {"tierName": "Boceto", "basePrice": 1000, "addons": [{"name": "+Color", "price": 500}]}).
+
+    Payments (Registro Financiero):
+
+        Id (UUID, PK)
+
+        CommissionId (UUID, FK a Commissions)
+
+        Provider (Enum: MercadoPago, Stripe)
+
+        ProviderTransactionId (String - El ID que nos devuelve la pasarela)
+
+        Amount (Decimal 18,2)
+
+        Status (Enum: Pending, Approved, Refunded)
+
+8. Estrategia de Endpoints (.NET 10 Minimal APIs)
+
+Hermano, en .NET 10 las Minimal APIs vuelan. No necesitamos controladores pesados, vamos directo al grano separando por dominios lógicos.
+
+Dominio Público (Muro del Artista - Sin Autenticación)
+
+    GET /api/v1/artists/{username} -> Devuelve Perfil + Estado de la cola.
+
+    GET /api/v1/artists/{username}/tiers -> Devuelve el catálogo y los addons para armar la calculadora en React.
+
+    GET /api/v1/artists/{username}/queue -> Devuelve la lista de Commissions activas (solo mostrando nombre del tier y estado, ocultando data sensible).
+
+Dominio Transaccional (Cliente logueado)
+
+    POST /api/v1/commissions -> El cliente envía el payload. El backend RECALCULA el precio para evitar que nos manipulen el frontend, guarda el SnapshotData y crea la orden en PendingApproval.
+
+Dominio Backoffice (Artista logueado - Protegido con JWT + Rol)
+
+    POST /api/v1/catalog/tiers -> Crea un nuevo servicio.
+
+    PATCH /api/v1/dashboard/commissions/{id}/accept -> El artista acepta el pedido. Acción: Dispara la llamada a Mercado Pago/Stripe para generar el link de pago y se lo devuelve al cliente.
+
+    PATCH /api/v1/dashboard/commissions/{id}/status -> Cambia de "Boceto" a "Finalizado".
+
+Dominio de Integración (Webhooks)
+
+    POST /api/v1/webhooks/mercadopago -> Endpoint seguro. Cuando Mercado Pago avisa que el cliente pagó, .NET busca la Commission, le cambia el estado a InQueue y libera el slot.
+
+9. Requisitos No Funcionales (RNF)
+
+Acá es donde separamos a los amateurs de los profesionales. Un sistema que maneja cobros tiene que ser una roca.
+
+    RNF-01 (Rendimiento - Latencia): La carga del muro público del artista (GET /artists/{username}) debe resolverse en menos de 200ms. Si tenemos picos de tráfico (ej: el artista publica en Twitter), .NET debe cachear este endpoint (usando OutputCache nativo de .NET 10).
+
+    RNF-02 (Seguridad - Zero Trust): BAJO NINGUNA CIRCUNSTANCIA la calculadora de React define el precio final a cobrar. El frontend solo estima para mostrarle al usuario. El cálculo real y absoluto se hace en el backend de .NET al momento de crear el POST /api/v1/commissions.
+
+    RNF-03 (Seguridad - Manejo de Tarjetas): El sistema NO debe almacenar números de tarjeta de crédito ni CVVs. Todo el flujo de pago se delega (Off-site o vía SDK seguro) a Mercado Pago, Stripe o PayPal. Cumplimiento absoluto de normas PCI-DSS por delegación.
+
+    RNF-04 (Almacenamiento de Archivos): Las imágenes de referencia (del cliente) y la galería (del artista) no se guardan en la base de datos ni en el servidor web. Se suben a un Object Storage (ej: AWS S3, Cloudflare R2) generando URLs prefirmadas (Presigned URLs) desde .NET para subidas directas, quitándole carga a nuestro backend.
+
+    RNF-05 (Concurrencia - Race Conditions): Si un artista abre solo "2 Slots" y hay 50 personas intentando pagar al mismo tiempo, la base de datos PostgreSQL debe usar bloqueos transaccionales (Pessimistic Locking o Constraints) para asegurar que no se vendan 3 slots.
+
+10. Fases de Desarrollo (MVP Milestones)
+
+Locura, no trates de construir todo esto de una porque no salimos más. Lo partimos en Sprints claros:
+
+    Fase 1: El Esqueleto (Semanas 1-2)
+
+        Setup de la solución .NET 10 y React.
+
+        Auth básica (JWT).
+
+        ABM (Alta, Baja, Modificación) del Catálogo y la Galería.
+
+    Fase 2: La Calculadora y el Motor (Semanas 3-4)
+
+        Lógica del frontend para la calculadora en tiempo real.
+
+        Lógica del backend para validar precios y crear Commissions.
+
+    Fase 3: La Plata y la Cola (Semanas 5-6)
+
+        Integración de SDK de Mercado Pago (Webhooks y Preferencias).
+
+        Tablero de Gestión (Backoffice del artista para mover tarjetas de estado).
+
+        Vista pública de los Proyectos Paralelos.
+
+# PRD: CommiFlow — Versión Hackathon (MVP)
+
+## Deadline: 7 días | Equipo: 3 personas | Deploy: CubePath
+
+> **NOTA**: Este documento es un subset del PRD principal ([PRD.md](./PRD.md)). Mantiene la visión del producto pero con scope reducido para una hackathon de 7 días. El documento completo de referencia es el [SRS.md](./SRS.md).
+
+> **RFC 2119**: Las palabras clave "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY" y "OPTIONAL" se interpretan según [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
+
+---
+
+## 1. Problem Statement
+
+Vender arte por encargo en 2026 sigue siendo un caos organizativo para artistas independientes. El flujo de trabajo actual está roto:
+
+- **Fricción en la cotización**: Mensajes interminables por Instagram/X para presupuestar. El artista calcula mentalmente, explica precios, y reza para que el cliente no desaparezca.
+- **Ansiedad del cliente**: Sin sistema de seguimiento transparente, el cliente interrumpe constantemente pidiendo actualizaciones.
+- **Gestión de pagos manual**: Links sueltos de Mercado Pago, comprobantes revisados a mano, miedo constante al chargeback.
+- **Desorganización de slots**: "Comisiones Abiertas (3/5)" en un tweet que a las 2 horas queda sepultado.
+
+La mayoría de los artistas resuelve esto con un frankenstein de herramientas: Linktree, Google Docs para precios, Trello público para la cola, y DMs para negociar.
+
+**CommiFlow elimina este frankenstein.** Unificamos catálogo, calculadora de precios dinámica, cola de trabajo pública y pasarela de pagos en una sola herramienta diseñada para este nicho.
+
+---
+
+## 2. Objetivos del MVP (Hackathon)
+
+### 2.1. Objetivo Principal
+
+Entregar un producto mínimo viable funcional que demuestre el flujo core end-to-end: artista configura su tienda → cliente cotiza → cliente paga → artista gestiona pedidos.
+
+### 2.2. Criterios de Evaluación
+
+| Criterio | Peso estimado | Enfoque |
+|----------|---------------|---------|
+| **Originalidad** | Alto | Nicho específico, no es otro e-commerce genérico |
+| **Calidad de código** | Alto | Arquitectura limpia, tipado fuerte, separación de concerns |
+| **Uso de CubePath** | Alto | Deploy real en CubePath VPS, aprovechar API/CLI para infra |
+
+### 2.3. Definición de Éxito (MUSTs del MVP)
+
+El MVP MUST ser capaz de demostrar el siguiente flujo completo ante el jurado:
+
+1. Un artista se registra y configura su perfil público (avatar, bio, galería, tiers, addons)
+2. Un cliente visita `/{username}` y ve el muro público del artista
+3. El cliente selecciona un tier, agrega extras, y la calculadora muestra el precio en tiempo real
+4. El cliente completa el brief con descripción y referencias visuales, y envía el pedido
+5. El artista ve el pedido en su dashboard, lo acepta
+6. Se genera un link de pago de MercadoPago
+7. (Demo) El pago se simula/confirma → el pedido pasa a la cola pública
+8. El artista cambia el estado del pedido (WIP → Completed)
+
+---
+
+## 3. Scope — Lo que SÍ entra
+
+| Módulo | Feature | Prioridad | RF Referencia |
+|--------|---------|-----------|---------------|
+| **Auth** | Registro/Login con JWT | MUST | RF-01, RF-02 |
+| **Auth** | Perfil base (username slug, display name) | MUST | RF-03 |
+| **Muro Público** | Perfil del artista (avatar, bio, banner) | MUST | RF-03 |
+| **Muro Público** | Galería de imágenes (upload real) | MUST | RF-04 |
+| **Muro Público** | Catálogo de Tiers (CRUD artista) | MUST | RF-05 |
+| **Muro Público** | Addons por Tier (CRUD artista) | MUST | RF-06 |
+| **Muro Público** | Calculadora de extras (frontend React) | MUST | RF-07 |
+| **Muro Público** | Cola de trabajo pública (solo lectura) | MUST | RF-13 |
+| **Compra** | Cliente envía requerimiento con referencias (upload real) | MUST | RF-08, RF-09 |
+| **Compra** | Backend valida precio (recalculo server-side) | MUST | RNF-02 |
+| **Tablero Artista** | Bandeja de pedidos entrantes | MUST | RF-10 |
+| **Tablero Artista** | Aceptar pedido → genera link de pago | MUST | RF-11, RF-16 |
+| **Tablero Artista** | Rechazar pedido (con motivo opcional) | SHOULD | RF-11 |
+| **Tablero Artista** | Cambiar estado del pedido | MUST | RF-12 |
+| **Pagos** | MercadoPago: generación de preferencia | MUST | RF-16 |
+| **Pagos** | MercadoPago: webhook de confirmación | MUST | RF-17 |
+| **Deploy** | Aplicación corriendo en CubePath VPS | MUST | — |
+| **Deploy** | Demostrar uso de CubePath API/CLI en el proceso | SHOULD | — |
+
+---
+
+## 4. Lo que QUEDA FUERA (Postergado)
+
+| Feature | Razón | RF Referencia |
+|---------|-------|---------------|
+| Stripe / PayPal | Tiempo de integración x3. UNA pasarela alcanza para demo. | RF-15, RF-16 |
+| Contratos auto-generados | Complejidad legal + PDF generation. Scope creep. | RF-11 (SRS) |
+| Marca de agua en previews | Processing dinámico innecesario para MVP. | RF-12 (SRS) |
+| Múltiples monedas por artista | Una moneda (ARS) por cuenta para MVP. | RF-05 (SRS) |
+| Locking transaccional de slots | Boolean `IsQueueOpen` alcanza. Race conditions no críticas en demo. | RNF-05 |
+| Cliente anónimo en cola | Nice-to-have, no afecta el demo. | RF-14 (SRS) |
+| Notificaciones (email/push) | Fuera de scope. El estado se ve en el dashboard y la cola. | — |
+| Sistema de reviews/ratings | Post-MVP. | — |
+| Admin backoffice | No necesario para demo de 7 días. | — |
+| SEO / SSR (Next.js) | SPA con React alcanza. El muro público es cacheable. | — |
+| AWS S3/R2 con Presigned URLs | Upload directo a storage local o servicio simple en CubePath. | RNF-04 |
+
+---
+
+## 5. Decisiones Técnicas (Tech Stack)
+
+### 5.1. Frontend: React 19 (SPA) + Zustand
+
+- **MUST** usar React como SPA desacoplada del backend.
+- **SHOULD** usar Zustand para estado global de la calculadora y flujo de compra.
+- **MUST** usar React Router v6 para navegación entre muro público y dashboard.
+- La calculadora **MUST** recalcular el precio en el cliente sin round-trips al servidor (UX inmediata).
+- **Trade-off aceptado**: Sin SSR, sacrificamos SEO dinámico. Ganamos simplicidad de deploy.
+
+### 5.2. Backend: .NET 10 (Minimal APIs)
+
+- **MUST** usar .NET 10 con Minimal APIs.
+- **MUST** implementar arquitectura en capas: Endpoints → Services → Repositories.
+- **MUST** usar Entity Framework Core como ORM con PostgreSQL.
+- **MUST** usar Inyección de Dependencias nativa de .NET.
+
+### 5.3. Base de Datos: PostgreSQL
+
+- **MUST** usar PostgreSQL como base de datos relacional.
+- **SHOULD** correr en el mismo CubePath VPS que el backend para simplificar el deploy.
+
+### 5.4. Autenticación: JWT
+
+- **MUST** implementar autenticación basada en JWT (access tokens).
+- **SHOULD** incluir refresh tokens para UX aceptable en la demo.
+- **MUST** hashear contraseñas con BCrypt o Argon2.
+
+### 5.5. Deploy: CubePath
+
+- **MUST** deployar la aplicación en un CubePath Cloud VPS.
+- **SHOULD** usar CubePath API o CubeCLI para provisionar infraestructura como parte del flujo de hackathon (criterio de evaluación).
+- **RECOMMENDED**: VPS con Docker Compose (app + PostgreSQL) para simplicidad.
+- CubePath ofrece: deploy en 30s, billing por hora ($0.007/h), DDoS protection incluido, API REST pública, CLI open-source.
+
+---
+
+## 6. Modelo de Datos
+
+```
+Users
+├── Id (UUID, PK)
+├── Username (String, Unique) — slug para URL pública: /{username}
+├── Email (String, Unique)
+├── PasswordHash (String)
+├── Role (Enum: Artist | Client)
+└── CreatedAt (DateTime UTC)
+
+ArtistProfiles
+├── Id (UUID, PK)
+├── UserId (UUID, FK → Users, Unique)
+├── DisplayName (String)
+├── Bio (Text)
+├── BannerUrl (String, nullable)
+├── AvatarUrl (String, nullable)
+├── IsQueueOpen (Boolean — control maestro para pausar comisiones)
+└── PaymentProvider (Enum: MercadoPago)
+    └── MercadoPagoAccessToken (String, encriptado)
+
+Tiers
+├── Id (UUID, PK)
+├── ArtistId (UUID, FK → ArtistProfiles)
+├── Name (String — ej: "Boceto", "Full Color")
+├── Description (Text)
+├── BasePrice (Decimal 18,2)
+├── EstimatedDays (Int)
+└── IsActive (Boolean)
+
+Addons
+├── Id (UUID, PK)
+├── TierId (UUID, FK → Tiers)
+├── Name (String — ej: "+1 Personaje", "Uso Comercial")
+├── Type (Enum: Fixed | Percentage)
+└── Value (Decimal 18,2)
+
+Commissions
+├── Id (UUID, PK)
+├── ClientId (UUID, FK → Users)
+├── ArtistId (UUID, FK → ArtistProfiles)
+├── TierId (UUID, FK → Tiers)
+├── Status (Enum — ver §6.1)
+├── ClientBrief (Text)
+├── ReferenceImages (JSON array de URLs)
+├── FinalPrice (Decimal 18,2 — precio validado por backend)
+└── SnapshotData (JSONB — foto del precio al momento de la compra)
+
+Payments
+├── Id (UUID, PK)
+├── CommissionId (UUID, FK → Commissions)
+├── Provider (Enum: MercadoPago)
+├── ProviderTransactionId (String — ID que devuelve la pasarela)
+├── Amount (Decimal 18,2)
+└── Status (Enum: Pending | Approved | Refunded)
+```
+
+### 6.1. Estados de Comisión (State Machine)
+
+```
+                    ┌─────────────────┐
+                    │ PendingApproval │ ← Estado inicial al crear pedido
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+              ▼              │              ▼
+     ┌────────────────┐      │     ┌───────────┐
+     │ AwaitingPayment│      │     │ Cancelled │
+     └───────┬────────┘      │     └───────────┘
+             │               │     (artista rechaza)
+             │               │
+     (cliente paga)    (artista rechaza)
+             │
+             ▼
+     ┌─────────┐
+     │ InQueue │ ← Visible en cola pública
+     └────┬────┘
+          │
+          ▼
+     ┌─────────┐
+     │   WIP   │ ← Artista está trabajando
+     └────┬────┘
+          │
+          ▼
+     ┌────────────┐
+     │ Completed  │ ← Entregado
+     └────────────┘
+```
+
+| Estado | Descripción | Quién transiciona |
+|--------|-------------|-------------------|
+| `PendingApproval` | Pedido creado, esperando revisión del artista | Sistema (al crear) |
+| `AwaitingPayment` | Artista aceptó, esperando que el cliente pague | Artista (al aceptar) |
+| `InQueue` | Pago confirmado, pedido en la cola pública | Sistema (webhook de pago) |
+| `WIP` | Artista está trabajando en el pedido | Artista |
+| `Completed` | Pedido entregado | Artista |
+| `Cancelled` | Pedido rechazado o cancelado | Artista (rechazar) o Sistema (timeout futuro) |
+
+**Transiciones válidas** (MUST validarse en backend):
+- `PendingApproval` → `AwaitingPayment` (artista acepta)
+- `PendingApproval` → `Cancelled` (artista rechaza)
+- `AwaitingPayment` → `InQueue` (webhook confirma pago)
+- `InQueue` → `WIP` (artista inicia trabajo)
+- `WIP` → `Completed` (artista entrega)
+
+Cualquier otra transición **MUST** ser rechazada por el backend con HTTP 409 Conflict.
+
+---
+
+## 7. API Endpoints
+
+### 7.1. Público (Sin autenticación)
+
+```
+GET  /api/v1/artists/{username}
+     → Perfil del artista + estado de la cola (IsQueueOpen)
+     → Response: ArtistProfile DTO
+
+GET  /api/v1/artists/{username}/tiers
+     → Catálogo de servicios con sus addons
+     → Response: List<TierWithAddonsDTO>
+
+GET  /api/v1/artists/{username}/gallery
+     → Imágenes del portfolio
+     → Response: List<GalleryImageDTO>
+
+GET  /api/v1/artists/{username}/queue
+     → Cola de pedidos activos (solo tier name + estado, sin datos sensibles)
+     → Response: List<QueueItemDTO>
+     → SHOULD paginar con query params: ?page=1&pageSize=10
+```
+
+### 7.2. Cliente (Autenticado)
+
+```
+POST /api/v1/commissions
+     → Crear pedido
+     → Body: { tierId, addonIds[], clientBrief, referenceImageUrls[] }
+     → Backend MUST recalcular el precio (NO confiar en el frontend)
+     → Backend MUST guardar SnapshotData con la composición del precio
+     → Response: CommissionDTO (con status: PendingApproval)
+```
+
+### 7.3. Artista (Autenticado + Rol Artist)
+
+```
+POST /api/v1/catalog/tiers
+     → Crear tier
+     → Body: { name, description, basePrice, estimatedDays }
+
+PUT  /api/v1/catalog/tiers/{id}
+     → Editar tier
+
+DELETE /api/v1/catalog/tiers/{id}
+     → Eliminar (soft delete → IsActive = false) o hard delete
+
+POST /api/v1/catalog/tiers/{tierId}/addons
+     → Crear addon para un tier
+
+GET  /api/v1/dashboard/commissions
+     → Bandeja de entrada (pedidos filtrados por estado)
+     → SHOULD soportar filtro: ?status=PendingApproval
+
+PATCH /api/v1/dashboard/commissions/{id}/accept
+     → Aceptar pedido
+     → Backend genera link de pago con SDK de MercadoPago
+     → Response: { commissionId, paymentUrl, newStatus: "AwaitingPayment" }
+
+PATCH /api/v1/dashboard/commissions/{id}/reject
+     → Rechazar pedido
+     → Body (OPTIONAL): { reason: "..." }
+     → newStatus: "Cancelled"
+
+PATCH /api/v1/dashboard/commissions/{id}/status
+     → Cambiar estado del pedido
+     → Body: { newStatus: "WIP" | "Completed" }
+     → Backend MUST validar que la transición es válida (ver §6.1)
+     → MUST retornar 409 si la transición no es válida
+```
+
+### 7.4. Webhooks (Sin autenticación por token, verificado por firma)
+
+```
+POST /api/v1/webhooks/mercadopago
+     → MercadoPago envía notificación de pago
+     → Backend MUST verificar firma HMAC del webhook
+     → Al recibir "payment_approved":
+       1. Buscar Commission por external_reference
+       2. Validar que está en AwaitingPayment
+       3. Crear registro en Payments
+       4. Cambiar Commission status → InQueue
+       5. Retornar HTTP 200
+     → MUST retornar 200 rápido (< 5s) para que MercadoPago no reintente
+```
+
+---
+
+## 8. Reglas de Negocio (Business Rules)
+
+### BR-01: Recalculo de precio (CRITICAL)
+El frontend calcula el precio para mostrar al usuario. El backend **MUST** recalcular el precio de forma independiente al recibir `POST /commissions`. Si el precio del frontend no coincide con el del backend (tolerancia: $0.01), el backend **MUST** usar SIEMPRE su propio cálculo y guardarlo en `FinalPrice` y `SnapshotData`.
+
+### BR-02: Snapshot inmutable
+Cuando se crea una Commission, `SnapshotData` **MUST** contener una copia exacta del nombre del tier, precio base, y cada addon con su nombre y precio al momento de la compra. Si el artista modifica los precios después, los pedidos existentes NO cambian.
+
+### BR-03: IsQueueOpen
+Si `ArtistProfile.IsQueueOpen = false`, el endpoint `POST /commissions` para ese artista **MUST** retornar HTTP 403 con mensaje "El artista no está aceptando comisiones actualmente".
+
+### BR-04: Solo un pago activo por comisión
+Si una Commission ya tiene un Payment en estado `Approved`, el backend **MUST NOT** generar un nuevo link de pago. Retornar HTTP 409.
+
+### BR-05: Validación de transiciones
+El backend **MUST** validar que cada cambio de estado de Commission siga la máquina de estados definida en §6.1. Transiciones inválidas **MUST** retornar HTTP 409.
+
+---
+
+## 9. Flujo Happy Path (Paso a paso)
+
+```
+1. Artista se registra (rol: Artist)
+   └→ JWT token de respuesta
+
+2. Artista configura su perfil
+   └→ DisplayName, Bio, Avatar, Banner, IsQueueOpen = true
+
+3. Artista crea Tiers
+   └→ Ej: "Boceto" ($50, 3 días), "Full Color" ($150, 7 días)
+
+4. Artista crea Addons por cada Tier
+   └→ Ej: "+1 Personaje" (Fixed, $30), "Uso Comercial" (Percentage, x2)
+
+5. Cliente visita /{username}
+   └→ Ve perfil, galería, catálogo, cola pública
+
+6. Cliente selecciona Tier + Extras
+   └→ Calculadora React muestra precio en tiempo real
+
+7. Cliente completa brief + sube hasta 5 imágenes de referencia
+   └→ POST /api/v1/commissions
+
+8. Backend recalcula precio, guarda SnapshotData, crea Commission
+   └→ Status: PendingApproval
+
+9. Artista ve el pedido en su dashboard
+   └→ GET /api/v1/dashboard/commissions?status=PendingApproval
+
+10. Artista acepta el pedido
+    └→ PATCH /dashboard/commissions/{id}/accept
+    └→ Backend genera preferencia en MercadoPago
+    └→ Response: { paymentUrl }
+    └→ Status: AwaitingPayment
+
+11. Cliente abre el link de pago y paga
+    └→ MercadoPago procesa el pago
+
+12. MercadoPago envía webhook a /api/v1/webhooks/mercadopago
+    └→ Backend verifica firma, crea Payment, cambia status → InQueue
+
+13. Cliente y público ven el pedido en la cola pública
+    └→ GET /api/v1/artists/{username}/queue
+
+14. Artista inicia trabajo
+    └→ PATCH /dashboard/commissions/{id}/status { newStatus: "WIP" }
+
+15. Artista entrega
+    └→ PATCH /dashboard/commissions/{id}/status { newStatus: "Completed" }
+```
+
+---
+
+## 10. Imágenes (Storage Simplificado)
+
+Para la hackathon:
+- Las imágenes (galería del artista + referencias del cliente) **SHOULD** almacenarse en el servidor del CubePath VPS o en un servicio externo gratuito.
+- **RECOMMENDED**: Servir imágenes estáticamente desde el mismo VPS (carpeta `/uploads` servida por Nginx o por el propio .NET como static files).
+- **SHOULD NOT** configurar S3/R2/Cloudinary para el MVP. Es overkill para una demo.
+- **MUST** validar tipo MIME y tamaño máximo (5MB por imagen) en el backend.
+
+---
+
+## 11. Pagos (MercadoPago)
+
+- **Pasarela**: MercadoPago (única para el MVP).
+- **Flujo**: El artista acepta → backend crea una "Preferencia" de MercadoPago vía SDK → devuelve URL de pago al frontend → cliente paga en la página de MercadoPago → webhook confirma.
+- **Webhook minimal**: Solo procesar evento `payment` con status `approved`. Ignorar el resto.
+- **MUST NOT** hacer refunds ni manejar disputas en el MVP.
+- **MUST** verificar la firma del webhook para evitar falsificaciones.
+
+---
+
+## 12. Deploy en CubePath
+
+### 12.1. Arquitectura de Deploy
+
+```
+CubePath Cloud VPS (1 instancia)
+├── Docker Compose
+│   ├── app (.NET 10 API + React SPA servida como static files)
+│   └── postgres (PostgreSQL 16+)
+├── Nginx (reverse proxy + TLS)
+└── Volumen persistente (PostgreSQL data + uploads)
+```
+
+### 12.2. Uso de CubePath (Criterio de Evaluación)
+
+Para destacar en el criterio "Uso de CubePath":
+- **SHOULD** usar CubeCLI o CubePath API para provisionar el VPS como parte del proceso de hackathon (script automatizado).
+- **SHOULD** documentar el proceso de deploy en CubePath (screenshots, comandos CubeCLI usados).
+- **RECOMMENDED**: Crear un script `deploy.sh` que use `cubecli` para:
+  1. Crear VPS
+  2. Instalar Docker
+  3. Clonar repo
+  4. Levantar Docker Compose
+- Las locations disponibles (Barcelona, Houston, Miami) **SHOULD** elegirse según la latencia objetivo.
+
+---
+
+## 13. Distribución de Tareas
+
+> **Premisa**: 2 devs son más fuertes en backend, 1 es más fuerte en frontend.
+
+| Persona | Responsabilidad Backend | Responsabilidad Frontend | Días 1-2 | Días 3-4 | Días 5-6 | Día 7 |
+|---------|------------------------|-------------------------|----------|----------|----------|-------|
+| **Dev 1** (Backend) | Auth (JWT), Users, Models, DB setup, Migrations | Router base + Auth pages (Login/Register) | Auth completo | Endpoints de catálogo | Dashboard endpoints | Testing + Bug fixes |
+| **Dev 2** (Backend) | Tiers/Addons CRUD, Price Calculator logic, Commission CRUD | Muro Público (perfil, galería, cola) | Models + DB | Calculator backend + Commission creation | Accept/Reject + Status transitions | MercadoPago integration |
+| **Dev 3** (Frontend) | Webhook MercadoPago, Deploy scripts | Calculadora React, Commission form, Dashboard UI | React setup + Components básicos | Calculadora + Muro | Dashboard completo | Deploy en CubePath + E2E testing |
+
+**NOTAS**:
+- Dev 1 y Dev 2 DEBEN ayudar con el frontend cuando el backend esté estable (día 5+).
+- Dev 3 DEBE tener el webhook de MercadoPago como único task de backend (aislado, testeable).
+- El día 7 es sagrado para integración, testing end-to-end y deploy en CubePath.
+
+---
+
+## 14. Timeline Sugerido
+
+| Día | Fase | Entregable |
+|-----|------|-----------|
+| **1** | Setup + Auth | Repo creado, .NET + React bootstrapped, Auth JWT funcional, DB con migraciones |
+| **2** | Catálogo + Galería | CRUD de Tiers, Addons, upload de galería. Muro público muestra perfil + catálogo |
+| **3** | Calculadora + Compra | Calculadora React funcional (tiempo real). Formulario de commission con upload de referencias |
+| **4** | Commission + Backend validation | POST /commissions con recalculo de precio. SnapshotData guardado correctamente |
+| **5** | Dashboard Artista | Bandeja de pedidos. Accept/Reject. Cambio de estados. Cola pública visible |
+| **6** | MercadoPago + Webhook | Generación de preferencia. Webhook de confirmación. Flujo end-to-end de pago |
+| **7** | Deploy + Testing + Polish | Deploy en CubePath. E2E testing. Bug fixes. Preparación de demo |
+
+---
+
+## 15. Definition of Done (Hackathon)
+
+Cada item **MUST** estar verificado antes de la presentación:
+
+- [ ] Usuario puede registrarse como Artist o Client
+- [ ] Artista puede configurar su perfil público (avatar, bio, banner, galería)
+- [ ] Artista puede crear/editar/eliminar Tiers y Addons
+- [ ] Cliente puede visitar /{username} y ver el muro público
+- [ ] Calculadora de extras recalcular el precio en tiempo real (frontend)
+- [ ] Cliente puede crear un pedido con brief + imágenes de referencia (upload real)
+- [ ] Backend recalcula y valida el precio al crear la comisión
+- [ ] Artista ve bandeja de pedidos entrantes en su dashboard
+- [ ] Artista puede aceptar un pedido (genera link de MercadoPago)
+- [ ] Artista puede rechazar un pedido
+- [ ] Artista puede cambiar estado del pedido (InQueue → WIP → Completed)
+- [ ] Webhook de MercadoPago confirma el pago y actualiza el estado
+- [ ] Cola pública muestra pedidos activos con su estado
+- [ ] Aplicación deployada y accesible en CubePath VPS
+- [ ] Transiciones de estado inválidas retornan 409
+
+---
+
+## 16. Riesgos y Mitigaciones
+
+| Riesgo | Probabilidad | Impacto | Mitigación |
+|--------|-------------|---------|------------|
+| SDK de MercadoPago tiene bugs/documentación confusa | Alta | Alto | Dedicar día 6 completo. Tener fallback de simular pago manualmente para la demo. |
+| Upload de imágenes consume tiempo | Media | Medio | Usar upload local al VPS, no S3. Servir como static files. |
+| .NET 10 tiene breaking changes o bugs | Baja | Alto | Usar features estables. Minimal APIs + EF Core son maduras. |
+| CubePath deploy falla el día 7 | Media | Alto | Tener Docker Compose funcionando localmente ANTES del deploy. CubePath es solo "subirlo". |
+| Scope creep (agregar features no planeadas) | Alta | Alto | Este documento es el contrato. Cualquier feature nueva pasa por revisión de scope. |
+
+---
+
+## 17. Decisiones Asumidas (Assumptions)
+
+1. Moneda única: ARS (Peso Argentino) para todo el MVP.
+2. Un solo rol por usuario (Artist o Client, no ambos).
+3. No hay sistema de notificaciones. El estado se consulta activamente.
+4. No hay paginación obligatoria en MVP (SHOULD, no MUST), pero los endpoints la soportan si hay tiempo.
+5. Las imágenes se suben al mismo VPS, no a CDN externo.
+6. No hay sistema de recuperación de contraseña para el MVP.
+7. El webhook de MercadoPago no tiene retry robusto. Si falla, se procesa manualmente en la demo.
+
+---
+
+*Documento generado para hackathon de 7 días. Scope realista, no ambicioso. RFC 2119 aplicado.*
